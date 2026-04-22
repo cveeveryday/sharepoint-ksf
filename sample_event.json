@@ -1,0 +1,107 @@
+{
+  "jobs": [
+    {
+      "_comment": "Sync Entra ID users to SharePoint",
+      "connector": "entraid",
+      "connector_config": {
+        "tenant_id": {"$secret": "ENTRAID_TENANT_ID"},
+        "client_id": {"$secret": "ENTRAID_CLIENT_ID"},
+        "client_secret": {"$secret": "ENTRAID_CLIENT_SECRET"},
+        "resource": "users",
+        "list_name": "KPI_EntraID_Users"
+      }
+    },
+    {
+      "_comment": "Sync Entra ID managed devices",
+      "connector": "entraid",
+      "connector_config": {
+        "tenant_id": {"$secret": "ENTRAID_TENANT_ID"},
+        "client_id": {"$secret": "ENTRAID_CLIENT_ID"},
+        "client_secret": {"$secret": "ENTRAID_CLIENT_SECRET"},
+        "resource": "devices",
+        "list_name": "KPI_EntraID_Devices"
+      }
+    },
+    {
+      "_comment": "Sync Meraki network device inventory",
+      "connector": "meraki",
+      "connector_config": {
+        "api_key": {"$secret": "MERAKI_API_KEY"},
+        "org_id": {"$secret": "MERAKI_ORG_ID"},
+        "resource": "devices",
+        "list_name": "KPI_Network_Devices"
+      }
+    },
+    {
+      "_comment": "Sync Meraki connected clients (last 24h)",
+      "connector": "meraki",
+      "connector_config": {
+        "api_key": {"$secret": "MERAKI_API_KEY"},
+        "org_id": {"$secret": "MERAKI_ORG_ID"},
+        "resource": "clients",
+        "list_name": "KPI_Network_Clients"
+      }
+    },
+    {
+      "_comment": "Sync SendGrid email stats (last 7 days)",
+      "connector": "sendgrid",
+      "connector_config": {
+        "api_key": {"$secret": "SENDGRID_API_KEY"},
+        "resource": "stats",
+        "days_back": 7,
+        "list_name": "KPI_Email_Stats"
+      }
+    },
+    {
+      "_comment": "Sync NinjaOne device inventory",
+      "connector": "ninjaone",
+      "connector_config": {
+        "client_id": {"$secret": "NINJAONE_CLIENT_ID"},
+        "client_secret": {"$secret": "NINJAONE_CLIENT_SECRET"},
+        "instance_url": "https://app.ninjarmm.com",
+        "resource": "devices",
+        "list_name": "KPI_RMM_Devices"
+      }
+    },
+    {
+      "_comment": "Sync NinjaOne open alerts",
+      "connector": "ninjaone",
+      "connector_config": {
+        "client_id": {"$secret": "NINJAONE_CLIENT_ID"},
+        "client_secret": {"$secret": "NINJAONE_CLIENT_SECRET"},
+        "instance_url": "https://app.ninjarmm.com",
+        "resource": "alerts",
+        "list_name": "KPI_RMM_Alerts"
+      }
+    },
+    {
+      "_comment": "Generic connector example: custom REST API with bearer auth and pagination",
+      "connector": "generic",
+      "connector_config": {
+        "list_name": "KPI_Custom_Metrics",
+        "endpoint": "https://api.example.com/v1/metrics",
+        "method": "GET",
+        "auth": {
+          "type": "bearer",
+          "token": "your-token-here"
+        },
+        "query_params": {
+          "period": "last_30_days"
+        },
+        "response_path": "data.results",
+        "unique_key_field": "id",
+        "pagination": {
+          "type": "next_link",
+          "field": "next"
+        },
+        "field_map": {
+          "id":          {"sp_name": "ExternalID",   "sp_type": "Text"},
+          "name":        {"sp_name": "MetricName",   "sp_type": "Text"},
+          "value":       {"sp_name": "MetricValue",  "sp_type": "Number"},
+          "recorded_at": {"sp_name": "RecordedAt",   "sp_type": "DateTime"},
+          "category":    {"sp_name": "Category",     "sp_type": "Text"}
+        }
+      }
+    }
+  ]
+}
