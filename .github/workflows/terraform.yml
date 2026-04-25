@@ -1,0 +1,79 @@
+name: 'Terraform Deploy'
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+    inputs:
+      sp_tenant_id:
+        description: 'SharePoint Tenant ID'
+        required: true
+        type: string
+      sp_client_id:
+        description: 'SharePoint Client ID'
+        required: true
+        type: string
+      sp_site_url:
+        description: 'SharePoint Site URL'
+        required: true
+        type: string
+      sp_tenant_name:
+        description: 'SharePoint Tenant Name'
+        required: true
+        type: string
+
+permissions:
+  id-token: write # Required for requesting the JWT
+  contents: read  # Required for actions/checkout
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: terraform init
+        working-directory: .
+        env:
+          TF_VAR_s3bucketname: ${{ vars.S3_BUCKET_NAME }}
+          TF_VAR_s3bucketregion: ${{ vars.AWS_REGION }}
+          TF_VAR_dynamodb_table: ${{ vars.DYNAMODB_TABLE }}
+
+      - name: Terraform Plan
+        run: terraform plan
+        working-directory: .
+        env:
+          TF_VAR_s3bucketname: ${{ vars.S3_BUCKET_NAME }}
+          TF_VAR_s3bucketregion: ${{ vars.AWS_REGION }}
+          TF_VAR_dynamodb_table: ${{ vars.DYNAMODB_TABLE }}
+          TF_VAR_sp_tenant_id: ${{ github.event.inputs.sp_tenant_id || secrets.SP_TENANT_ID }}
+          TF_VAR_sp_client_id: ${{ github.event.inputs.sp_client_id || secrets.SP_CLIENT_ID }}
+          TF_VAR_sp_client_secret: ${{ secrets.SP_CLIENT_SECRET }}
+          TF_VAR_sp_site_url: ${{ github.event.inputs.sp_site_url || secrets.SP_SITE_URL }}
+          TF_VAR_sp_tenant_name: ${{ github.event.inputs.sp_tenant_name || secrets.SP_TENANT_NAME }}
+
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: terraform apply -auto-approve
+        working-directory: .
+        env:
+          TF_VAR_s3bucketname: ${{ vars.S3_BUCKET_NAME }}
+          TF_VAR_s3bucketregion: ${{ vars.AWS_REGION }}
+          TF_VAR_dynamodb_table: ${{ vars.DYNAMODB_TABLE }}
+          TF_VAR_sp_tenant_id: ${{ github.event.inputs.sp_tenant_id || secrets.SP_TENANT_ID }}
+          TF_VAR_sp_client_id: ${{ github.event.inputs.sp_client_id || secrets.SP_CLIENT_ID }}
+          TF_VAR_sp_client_secret: ${{ secrets.SP_CLIENT_SECRET }}
+          TF_VAR_sp_site_url: ${{ github.event.inputs.sp_site_url || secrets.SP_SITE_URL }}
+          TF_VAR_sp_tenant_name: ${{ github.event.inputs.sp_tenant_name || secrets.SP_TENANT_NAME }}
