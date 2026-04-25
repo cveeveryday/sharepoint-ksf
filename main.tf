@@ -15,6 +15,14 @@ terraform {
   }
 }
 
+  backend "s3" {
+    bucket         = var.s3bucketname
+    key            = "terraform.tfstate"
+    region         = var.s3bucketregion
+    dynamodb_table = var.dynamodb_table
+    encrypt        = true
+  }
+
 provider "aws" {
   region = var.aws_region
 }
@@ -89,6 +97,7 @@ resource "aws_ssm_parameter" "kpi_params" {
   type     = contains(["SP_CLIENT_SECRET"], each.key) ? "SecureString" : "String"
   value    = each.value
 }
+
 
 # ---- Lambda Package (zip) ------------------------------------
 
