@@ -14,8 +14,8 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
-from core.base_connector import BaseConnector
-from sharepoint.client import SharePointClient
+from base_connector import BaseConnector
+from client import SharePointClient
 
 logger = logging.getLogger(__name__)
 
