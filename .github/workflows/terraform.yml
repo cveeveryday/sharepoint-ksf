@@ -45,6 +45,9 @@ jobs:
 
       - name: Terraform Init
         run: terraform init
+            -backend-config="bucket=${{ vars.S3_BUCKET_NAME }}" \
+            -backend-config="region=${{ vars.AWS_REGION }}" \
+            -backend-config="dynamodb_table=${{ vars.DYNAMODB_TABLE }}"
         working-directory: .
         env:
           TF_VAR_s3bucketname: ${{ vars.S3_BUCKET_NAME }}
