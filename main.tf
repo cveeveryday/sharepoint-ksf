@@ -117,7 +117,6 @@ resource "aws_ssm_parameter" "kpi_params" {
 data "archive_file" "lambda_zip" {
   type        = "zip"
   output_path = "${path.module}/lambda_package.zip"
-<<<<<<< Updated upstream
   excludes    = [
     ".git",
     ".github",
@@ -132,8 +131,6 @@ data "archive_file" "lambda_zip" {
     "README.md",
     "sample_event.json",
   ]
-=======
-
   dynamic "source" {
     for_each = local.lambda_source_files
     content {
@@ -170,7 +167,7 @@ resource "aws_lambda_layer_version" "deps" {
   layer_name          = "${var.function_name}-deps"
   compatible_runtimes = ["python3.12"]
   source_code_hash    = data.archive_file.lambda_layer_zip.output_base64sha256
->>>>>>> Stashed changes
+
 }
 
 # ---- Lambda Function -----------------------------------------
