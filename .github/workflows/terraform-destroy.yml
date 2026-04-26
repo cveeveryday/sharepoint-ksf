@@ -42,4 +42,4 @@ jobs:
           TF_VAR_dynamodb_table: ${{ vars.DYNAMODB_TABLE }}
 
       - name: Terraform Destroy
-        run: terraform destroy -auto-approve
+        run: terraform destroy -auto-approve -input=false
