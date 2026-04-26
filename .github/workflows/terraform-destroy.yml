@@ -4,24 +4,6 @@ name: 'Terraform Destroy'
 on:
   push:
     branches: [ "main" ]
-  workflow_dispatch:
-    inputs:
-      sp_tenant_id:
-        description: 'SharePoint Tenant ID'
-        required: true
-        type: string
-      sp_client_id:
-        description: 'SharePoint Client ID'
-        required: true
-        type: string
-      sp_site_url:
-        description: 'SharePoint Site URL'
-        required: true
-        type: string
-      sp_tenant_name:
-        description: 'SharePoint Tenant Name'
-        required: true
-        type: string
 
 permissions:
   id-token: write # Required for requesting the JWT
@@ -32,6 +14,14 @@ jobs:
     runs-on: ubuntu-latest
     environment: dev
     steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
       - name: Terraform Init
         run: | 
             terraform init \
