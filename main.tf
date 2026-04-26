@@ -5,13 +5,14 @@
 #   terraform init
 #   terraform apply -var="sp_site_url=https://contoso.sharepoint.com/sites/KPIs"
 #
-# Secrets are stored in AWS Secrets Manager and SSM Parameter Store.
-# The Lambda reads them at runtime via core.config.Config.
+# No requirements.txt or pip pre-step needed.
+# Terraform builds the dependency layer inline via null_resource.
 # ============================================================
 
 terraform {
   required_providers {
-    aws = { source = "hashicorp/aws", version = "~> 5.0" }
+    aws  = { source = "hashicorp/aws", version = "~> 5.0" }
+    null = { source = "hashicorp/null", version = "~> 3.0" }
   }
 
   backend "s3" {
@@ -37,8 +38,42 @@ variable "sp_site_url"      {}
 variable "sp_tenant_name"   {}
 
 variable "sync_jobs_json" {
-  description = "JSON-encoded list of sync job definitions (same structure as sample_event.json)"
+  description = "JSON-encoded list of sync job definitions"
   default     = "[]"
+}
+
+# ---- Locals --------------------------------------------------
+
+locals {
+  params = {
+    "SP_TENANT_ID"     = var.sp_tenant_id
+    "SP_CLIENT_ID"     = var.sp_client_id
+    "SP_CLIENT_SECRET" = var.sp_client_secret
+    "SP_SITE_URL"      = var.sp_site_url
+    "SP_TENANT_NAME"   = var.sp_tenant_name
+  }
+
+  # Only the .py files that belong on Lambda.
+  # azure_function.py is intentionally excluded — it's Azure Functions only.
+  lambda_source_files = [
+    "lambda_handler.py",
+    "runner.py",
+    "client.py",
+    "config.py",
+    "base_connector.py",
+    "entraid.py",
+    "meraki.py",
+    "sendgrid_ninjaone.py",
+    "generic.py",
+  ]
+
+  # Add/remove packages here. Changing this list forces a layer rebuild.
+  # boto3   — omitted, pre-installed in the Lambda runtime.
+  # azure-* — omitted, Azure Functions only.
+  lambda_packages = ["requests"]
+
+  # Changing the list above changes this hash → triggers null_resource → reruns pip.
+  packages_hash = md5(join(",", sort(local.lambda_packages)))
 }
 
 # ---- IAM Role ------------------------------------------------
@@ -78,30 +113,6 @@ resource "aws_iam_role_policy" "secrets" {
 
 # ---- Secrets in SSM Parameter Store --------------------------
 
-locals {
-  params = {
-    "SP_TENANT_ID"     = var.sp_tenant_id
-    "SP_CLIENT_ID"     = var.sp_client_id
-    "SP_CLIENT_SECRET" = var.sp_client_secret
-    "SP_SITE_URL"      = var.sp_site_url
-    "SP_TENANT_NAME"   = var.sp_tenant_name
-  }
-
-  # The Python source files that belong in the Lambda zip.
-  # azure_function.py is intentionally excluded — it's Azure-only.
-  lambda_source_files = [
-    "lambda_handler.py",
-    "runner.py",
-    "client.py",
-    "config.py",
-    "base_connector.py",
-    "entraid.py",
-    "meraki.py",
-    "sendgrid_ninjaone.py",
-    "generic.py",
-  ]
-}
-
 resource "aws_ssm_parameter" "kpi_params" {
   for_each = local.params
   name     = "/sharepoint-kpi/${each.key}"
@@ -110,27 +121,13 @@ resource "aws_ssm_parameter" "kpi_params" {
 }
 
 # ---- Lambda Package (source code only, ~100 KB) --------------
-# We zip only the explicit list of .py files above.
-# This completely avoids accidentally including venv/, site-packages/,
-# node_modules/, or any other local dependency directory.
+# Zips only the explicit .py file list — can never accidentally
+# include venv/, site-packages/, or any other local directory.
 
 data "archive_file" "lambda_zip" {
   type        = "zip"
   output_path = "${path.module}/lambda_package.zip"
-  excludes    = [
-    ".git",
-    ".github",
-    ".gitignore",
-    "__pycache__",
-    "*.pyc",
-    ".env",
-    "main.tf",
-    "backend.hcl",
-    "*.zip",
-    "LICENSE",
-    "README.md",
-    "sample_event.json",
-  ]
+
   dynamic "source" {
     for_each = local.lambda_source_files
     content {
@@ -141,25 +138,41 @@ data "archive_file" "lambda_zip" {
 }
 
 # ---- Lambda Layer (pip dependencies) -------------------------
-# Build the layer locally before running terraform apply:
+# pip runs inside Terraform via null_resource — no requirements.txt
+# or manual pip step needed in CI or locally.
 #
-#   mkdir -p layer/python
-#   pip install requests \
-#       --platform manylinux2014_x86_64 \
-#       --python-version 3.12 \
-#       --only-binary=:all: \
-#       --upgrade \
-#       -t layer/python
+# Uses /tmp so there are no leftover build artifacts in the repo,
+# and the GitHub Actions runner always has write access to it.
 #
-# boto3 is intentionally omitted — it is pre-installed in the Lambda runtime.
-# azure-functions / azure-identity are intentionally omitted — AWS-only deploy.
-#
-# Re-run the pip command and re-apply whenever requirements change.
+# The layer only rebuilds when lambda_packages changes.
+
+resource "null_resource" "build_layer" {
+  triggers = {
+    packages = local.packages_hash
+  }
+
+  provisioner "local-exec" {
+    interpreter = ["bash", "-c"]
+    command     = <<-EOT
+      set -e
+      rm -rf /tmp/lambda-layer
+      mkdir -p /tmp/lambda-layer/python
+      pip install ${join(" ", local.lambda_packages)} \
+        --platform manylinux2014_x86_64 \
+        --python-version 3.12 \
+        --only-binary=:all: \
+        --upgrade \
+        -q \
+        -t /tmp/lambda-layer/python
+    EOT
+  }
+}
 
 data "archive_file" "lambda_layer_zip" {
   type        = "zip"
-  source_dir  = "${path.module}/layer"   # must contain a /python sub-directory
+  source_dir  = "/tmp/lambda-layer"
   output_path = "${path.module}/lambda_layer.zip"
+  depends_on  = [null_resource.build_layer]
 }
 
 resource "aws_lambda_layer_version" "deps" {
@@ -167,7 +180,6 @@ resource "aws_lambda_layer_version" "deps" {
   layer_name          = "${var.function_name}-deps"
   compatible_runtimes = ["python3.12"]
   source_code_hash    = data.archive_file.lambda_layer_zip.output_base64sha256
-
 }
 
 # ---- Lambda Function -----------------------------------------
