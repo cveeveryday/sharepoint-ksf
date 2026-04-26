@@ -2,8 +2,12 @@
 name: 'Terraform Destroy'
 
 on:
-  push:
-    branches: [ "main" ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Provide reason to destroy the infrastructure'
+        required: true
+        default: 'Avoid unnecessary costs'
 
 permissions:
   id-token: write # Required for requesting the JWT
