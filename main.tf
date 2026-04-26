@@ -100,9 +100,9 @@ resource "aws_ssm_parameter" "kpi_params" {
 
 data "archive_file" "lambda_zip" {
   type        = "zip"
-  source_dir  = "${path.module}/.."
+  source_dir  = "${path.module}"
   output_path = "${path.module}/lambda_package.zip"
-  excludes    = ["infrastructure", "tests", ".git", "__pycache__", "*.pyc", ".env"]
+  excludes    = [".git", ".github", "__pycache__", "*.pyc", ".env", "main.tf", "backend.hcl"]
 }
 
 # ---- Lambda Function -----------------------------------------
