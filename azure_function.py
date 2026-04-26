@@ -20,15 +20,15 @@ import sys
 
 import azure.functions as func
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+sys.path.insert(0, os.path.dirname(__file__))
 
-from core.config import Config
-from core.runner import SyncRunner
-from sharepoint.client import SharePointClient
-from connectors.entraid import EntraIDConnector
-from connectors.meraki import MerakiConnector
-from connectors.sendgrid_ninjaone import SendGridConnector, NinjaOneConnector
-from connectors.generic import GenericAPIConnector
+from config import Config
+from runner import SyncRunner
+from client import SharePointClient
+from entraid import EntraIDConnector
+from meraki import MerakiConnector
+from sendgrid_ninjaone import SendGridConnector, NinjaOneConnector
+from generic import GenericAPIConnector
 
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO"),

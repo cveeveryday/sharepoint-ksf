@@ -102,7 +102,20 @@ data "archive_file" "lambda_zip" {
   type        = "zip"
   source_dir  = "${path.module}"
   output_path = "${path.module}/lambda_package.zip"
-  excludes    = [".git", ".github", "__pycache__", "*.pyc", ".env", "main.tf", "backend.hcl"]
+  excludes    = [
+    ".git",
+    ".github",
+    ".gitignore",
+    "__pycache__",
+    "*.pyc",
+    ".env",
+    "main.tf",
+    "backend.hcl",
+    "*.zip",
+    "LICENSE",
+    "README.md",
+    "sample_event.json",
+  ]
 }
 
 # ---- Lambda Function -----------------------------------------
@@ -111,7 +124,7 @@ resource "aws_lambda_function" "kpi_sync" {
   function_name    = var.function_name
   role             = aws_iam_role.lambda_role.arn
   runtime          = "python3.12"
-  handler          = "handlers/lambda_handler.handler"
+  handler          = "lambda_handler.handler"
   timeout          = 900   # 15 minutes (max)
   memory_size      = 512
 

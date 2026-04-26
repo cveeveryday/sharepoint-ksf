@@ -11,7 +11,7 @@ from typing import Any, Iterator
 
 import requests
 
-from core.base_connector import BaseConnector, ConnectorResult, ConnectorSchema
+from base_connector import BaseConnector, ConnectorResult, ConnectorSchema
 
 logger = logging.getLogger(__name__)
 
