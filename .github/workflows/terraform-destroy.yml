@@ -40,11 +40,15 @@ jobs:
           TF_VAR_s3bucketname: ${{ vars.S3_BUCKET_NAME }}
           TF_VAR_s3bucketregion: ${{ vars.AWS_REGION }}
           TF_VAR_dynamodb_table: ${{ vars.DYNAMODB_TABLE }}
+
+      - name: Terraform Destroy
+        run: terraform destroy -auto-approve -input=false
+        env:
+          TF_VAR_s3bucketname: ${{ vars.S3_BUCKET_NAME }}
+          TF_VAR_s3bucketregion: ${{ vars.AWS_REGION }}
+          TF_VAR_dynamodb_table: ${{ vars.DYNAMODB_TABLE }}
           TF_VAR_sp_tenant_id: ${{ github.event.inputs.sp_tenant_id || secrets.SP_TENANT_ID }}
           TF_VAR_sp_client_id: ${{ github.event.inputs.sp_client_id || secrets.SP_CLIENT_ID }}
           TF_VAR_sp_client_secret: ${{ secrets.SP_CLIENT_SECRET }}
           TF_VAR_sp_site_url: ${{ github.event.inputs.sp_site_url || secrets.SP_SITE_URL }}
           TF_VAR_sp_tenant_name: ${{ github.event.inputs.sp_tenant_name || secrets.SP_TENANT_NAME }}
-
-      - name: Terraform Destroy
-        run: terraform destroy -auto-approve -input=false
