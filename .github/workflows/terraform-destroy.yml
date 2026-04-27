@@ -44,6 +44,8 @@ jobs:
 
       - name: Pre-destroy setup
         run: mkdir -p /tmp/lambda-layer
+             touch /tmp/lambda-layer/.keep
+
             
       - name: Terraform Destroy
         run: terraform destroy -auto-approve -input=false
