@@ -69,6 +69,7 @@ jobs:
           TF_VAR_sp_tenant_name: ${{ github.event.inputs.sp_tenant_name || secrets.SP_TENANT_NAME }}
 
       - name: Terraform Apply
+      # Only apply on push to main, not on workflow_dispatch to avoid accidental applies
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: terraform apply -auto-approve
         working-directory: .
